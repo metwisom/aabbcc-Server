@@ -6,15 +6,25 @@ import (
 	"aabbcc-Server/internal/pkg/server"
 )
 
-func DataPost(body *server.FiberRequest) map[string]interface{} {
+type IncomeData struct {
+	Items []model.Data `json:"items"`
+}
 
-	data := model.Data{}
+func DataPost(body server.Request) map[string]interface{} {
+
+	data := IncomeData{}
 	err := body.GetBody(&data)
 	if err != nil {
-		return map[string]interface{}{"code": 400, "error": err.Error()}
+		return err
 	}
 
-	db.Database.InsertData(&data)
-	response := map[string]interface{}{"message": "Данные успешно добавлены в базу данных"}
-	return response
+	//fmt.Println(data)
+
+	for _, v := range data.Items {
+		v.Id = 1
+
+		db.Database.InsertData(&v)
+	}
+
+	return server.ResponseOkString("message", "Данные успешно добавлены в базу данных")
 }

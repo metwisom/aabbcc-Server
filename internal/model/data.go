@@ -8,6 +8,12 @@ type Data struct {
 }
 
 type Auth struct {
+	Id       int    `json:"id" db:"id"`
+	Login    string `json:"login" db:"login" validate:"required"`
+	Password string `json:"password" db:"password" validate:"required"`
+}
+
+type Register struct {
 	Login    string `json:"login" db:"login" validate:"required"`
 	Password string `json:"password" db:"password" validate:"required"`
 }

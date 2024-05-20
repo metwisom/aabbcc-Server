@@ -3,20 +3,21 @@ package v1
 import (
 	"aabbcc-Server/internal/pkg/db"
 	"aabbcc-Server/internal/pkg/server"
-	"encoding/json"
 	"fmt"
 )
 
-func DataGet(_ *server.FiberRequest) map[string]interface{} {
-	result := db.Database.SelectData()
+type DataGetQuery struct {
+	From string `query:"from"`
+}
 
-	var myMap []map[string]interface{}
-	data, _ := json.Marshal(result)
+func DataGet(data server.Request) map[string]interface{} {
+	query := DataGetQuery{}
 
-	err := json.Unmarshal(data, &myMap)
-	if err != nil {
-		fmt.Println("unmarshal error", err.Error())
-	}
+	data.GetQuery(&query)
 
-	return map[string]interface{}{"items": myMap}
+	fmt.Println(query)
+
+	result := db.Database.SelectData(query.From)
+
+	return server.ResponseOkStruct("items", result)
 }
