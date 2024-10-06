@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:22.8
+    container_name: clickhouse
+    ports:
+      - "8123:8123"  # HTTP интерфейс ClickHouse
+      - "9000:9000"  # TCP интерфейс ClickHouse
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=12345
+      - CLICKHOUSE_DB=test_db
+    networks:
+      custom_network:
+        ipv4_address: 172.28.0.2
+
+  go-app:
+    image:
+      golang
+    container_name: go-app
+    volumes:
+      - ./cmd:/app/cmd
+      - ./internal:/app/internal
+      - ./go.mod:/app/go.mod
+      - ./go.sum:/app/go.sum
+    depends_on:
+      - clickhouse
+    ports:
+      - "45214:45214"  # порт для вашего Go-приложения
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=12345
+      - CLICKHOUSE_DB=test_db
+    working_dir: /app/  # Устанавливаем рабочую директорию в cmd
+    command: ["go", "run", "/app/cmd/server/main.go"]  # Команда для запуска Go-приложения
+    networks:
+      custom_network:
+        ipv4_address: 172.28.0.3
+volumes:
+  clickhouse_data:
+networks:
+  custom_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16  # Создаем подсеть

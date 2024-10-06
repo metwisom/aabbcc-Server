@@ -16,7 +16,7 @@ var Database = &database{}
 
 func (d *database) Connect() {
 	//connection, err := sqlx.Connect("sqlite3", "test.db")
-	connection, err := sqlx.Connect("clickhouse", "tcp://127.0.0.1:9000?username=&debug=true")
+	connection, err := sqlx.Connect("clickhouse", "tcp://172.28.0.2:9000?username=default&password=12345&database=test_db&debug=true")
 	if err != nil {
 		panic("Ошибка подключения к базе данных: " + err.Error())
 	}
@@ -167,9 +167,9 @@ func (d *database) InsertData(data *model.Data) {
 func (d *database) SelectData(max string) []model.Data {
 	query := ""
 	if max == "1" {
-		query = "SELECT * FROM (SELECT id, aspect,value,time_from FROM data ORDER BY time_from desc LIMIT 80) t ORDER BY time_from "
+		query = "SELECT * FROM (SELECT id, aspect,value,time_from FROM data ORDER BY time_from desc LIMIT 30 BY aspect) t ORDER BY time_from "
 	} else {
-		query = "SELECT * FROM (SELECT id, aspect,value,time_from FROM data ORDER BY time_from desc LIMIT 80) t ORDER BY time_from "
+		query = "SELECT * FROM (SELECT id, aspect,value,time_from FROM data ORDER BY time_from desc LIMIT 30 BY aspect) t ORDER BY time_from "
 	}
 
 	rows, err := d.connection.Query(query)
@@ -203,6 +203,14 @@ func (d *database) SelectData(max string) []model.Data {
 }
 
 func (d *database) GetUserByLogin(login string) *model.Auth {
+	query1 := "SELECT id,login,password FROM user"
+	rows1, _ := d.connection.Query(query1)
+	for rows1.Next() {
+		var data model.Auth
+		_ = rows1.Scan(&data.Id, &data.Login, &data.Password)
+		fmt.Println(data)
+	}
+	rows1.Close()
 	query := "SELECT id,login,password FROM user WHERE login = ?"
 	rows, _ := d.connection.Query(query, login)
 	for rows.Next() {
@@ -218,9 +226,21 @@ func (d *database) GetUserByLogin(login string) *model.Auth {
 func (d *database) CreateUser(data *model.Register) {
 	fmt.Println(data.Login, data.Password)
 
-	query := "INSERT INTO user (login,password) VALUES (?,?)"
-	if _, err := d.connection.Exec(query, data.Login, data.Password); err != nil {
-		log.Println("Ошибка вставки данных:", err)
+	tx, err := d.connection.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt, err := tx.Prepare("INSERT INTO user (login,password) VALUES (?,?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := stmt.Exec(data.Login, data.Password); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Fatal(err)
 	}
 
 }

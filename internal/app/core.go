@@ -27,6 +27,7 @@ func Run() {
 
 	go func() {
 		server.Listen(":45214")
+		fmt.Println("Server is Run")
 	}()
 	defer server.Close()
 
